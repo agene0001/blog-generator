@@ -3,7 +3,7 @@ import HeroSection from "@/app/components/hero";
 import InteractiveSection from "@/app/components/InteractiveSection";
 import React from "react";
 
-export default function Home() {
+export default function blogGenerator() {
     return (
         <>
             <Navbar/>
@@ -18,9 +18,9 @@ export default function Home() {
             }}>
 
                 <div className='heroback  spacerImg w-screen'></div>
-                <div className="hero-block hero-block--header " style={{textAlign: "start"}}>
-                    <h1 className="hero-title hero-title2 ">Blog Generator</h1>
-                    <p className="hero-text3 mx-15 md:ml-64 " style={{marginTop: '6rem'}}>
+                <div className="hero-block hero-block--header " style={{textAlign: "center"}}>
+                    <h1 className="hero-title hero-title2 m-4 md:ml-80">Blog Generator</h1>
+                    <p className="hero-text3 mx-20 md:ml-64 " style={{marginTop: '6rem'}}>
                         Try out our latest fully autonomous Blog post creator. Our AI-powered content creation platform
                         is designed to streamline and elevate your creative process. With advanced AI prompting,
                         effortlessly generate complete, high-quality blog posts tailored to your specified topics and
