@@ -1050,7 +1050,18 @@ body {
   background-size: 6px 50px;
   color: #000000;
 }
-
+.ml4 {
+  margin-right: 0;
+  position: relative;
+  font-weight: 900;
+  font-size: 1.6rem;
+}
+.ml5 {
+  margin-right: 0;
+  position: relative;
+  font-weight: 900;
+  font-size: 1.8rem;
+}
 .ml6 {
   margin-right: 0;
   position: relative;

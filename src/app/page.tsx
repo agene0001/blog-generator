@@ -14,13 +14,17 @@ export default function Home() {
                 height: "100%",
                 width: "100vw",
                 justifyContent: "center",
-                alignItems: "center"
+                alignItems: "center",
+                padding: "0 20px", // Add some padding for better spacing
             }}>
 
-                <div className='heroback  spacerImg w-screen'></div>
-                <div className="hero-block hero-block--header " style={{textAlign: "start"}}>
-                    <h1 className="hero-title hero-title2 ">Blog Generator</h1>
-                    <p className="hero-text3 mx-15 md:ml-64 " style={{marginTop: '6rem'}}>
+                <div className="heroback spacerImg w-full" style={{ minHeight: "400px" }}></div>
+
+                <div className="hero-block hero-block--header" style={{ textAlign: "center", maxWidth: "1500px" }}>
+                    <h1 className="hero-title hero-title2" style={{ fontSize: "2.5rem", lineHeight: "1.2" }}>
+                        Blog Generator
+                    </h1>
+                    <p className="hero-text3 mx-15" style={{ marginTop: "2rem", fontSize: "1.2rem", lineHeight: "1.6" }}>
                         Try out our latest fully autonomous Blog post creator. Our AI-powered content creation platform
                         is designed to streamline and elevate your creative process. With advanced AI prompting,
                         effortlessly generate complete, high-quality blog posts tailored to your specified topics and
@@ -28,6 +32,8 @@ export default function Home() {
                         also contextually relevant.
                     </p>
                 </div>
+
+                {/* Ensure InteractiveSection is responsive */}
                 <InteractiveSection/>
             </div>
         </>
