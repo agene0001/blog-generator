@@ -2,6 +2,7 @@
 import WaterDropGrid from "@/app/components/WaterDropGrid";
 import React, { useEffect, useState } from "react";
 
+
 export default function HeroSection() {
     const [windowWidth, setWindowWidth] = useState(0);
 
@@ -29,32 +30,29 @@ export default function HeroSection() {
 
     return (
         <>
-            <WaterDropGrid />
             <section
-                className="hero"
+                className="z-10 relative w-screen"
                 style={{
-                    height: '100vh',
-                    width: '100vw',
+                    height:'100vh',
+                    width: '100',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    position: 'relative',
                 }}>
+
+                <WaterDropGrid />
                 <div
-                    className="hero-block hero-block--header"
                     style={{
                         display: 'flex',
-                        flexDirection: 'column',
                         textAlign: "center",
+                        flexDirection: "column",
                         // justifyContent: 'center',
-                        alignItems: 'center',
-                        height: '100vh',
-                        padding: '0 1rem',
+                        alignItems: 'center'
                     }}>
-                    <h1 className="hero-title m-4 md:ml-80">
+                    <h1 className={`hero-title relative text-center text-4xl md:text-5xl lg:text-6xl font-bold text-white transition-all duration-700 ease-out `}>
                         Transform Ideas into Impact
                     </h1>
-                    <p className="hero-text bg-black md:ml-80">
+                    <p className="hero-text bg-black md:ml-80 " style={{maxWidth: "55rem"}}>
                         Create stunning blog posts, eye-catching images, and engaging videos—all in one place. Unleash your creativity and let AI bring your vision to life effortlessly.
                     </p>
                 </div>

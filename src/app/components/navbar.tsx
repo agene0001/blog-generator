@@ -1,211 +1,253 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react';
 import anime from 'animejs';
-import WaterDropGrid from "@/app/components/WaterDropGrid";
+// WaterDropGrid seems unlikely to be used *inside* the Navbar itself
+// import WaterDropGrid from "@/app/components/WaterDropGrid";
 import HeroSection from "@/app/components/hero";
-import {router} from "next/client";
+import {NavItem, State} from "@/types/global"; // Navbar renders HeroSection within its <main>
+// router was not used in the provided code
+// import { router } from "next/client";
 
-interface NavItem {
-    color: string;
-    element: HTMLElement;
-    id: number;
-    isActive: boolean;
-    type: 'DEFAULT' | 'PARENT';
-    childNavigation?: HTMLElement;
-    onClick: (event: MouseEvent) => void;
-}
+// --- Interfaces ---
 
-interface State {
-    navigationItems: Record<number, NavItem>;
-    root: HTMLElement | null;
-    activeItem?: number;
-}
-
-const colors = ['hsla(14, 97%, 65%, 0.4)'];
-
+// --- Component ---
 const Navbar: React.FC = () => {
+    // --- State and Refs ---
     const [state, setState] = useState<State>({ navigationItems: {}, root: null, activeItem: undefined });
-    const itemsRef = useRef<HTMLUListElement>(null);
-    const rootRef = useRef<HTMLDivElement>(null);
+    const itemsRef = useRef<HTMLUListElement>(null); // Ref for the main nav list
+    const rootRef = useRef<HTMLDivElement>(null); // Ref for the root layout element
 
+    const colors = ['hsla(14, 97%, 65%, 0.4)']; // Example color for frontdrop
+
+    // --- Effects ---
+
+    // Effect 1: Initial setup - Find nav items and set up state
     useEffect(() => {
+        // Ensure refs are current before proceeding
         if (!itemsRef.current || !rootRef.current) return;
 
         const items = itemsRef.current.querySelectorAll('.nav--header-1 > .nav__item');
-        const navItems: Record<number, NavItem> = {};
+        const navItemsMap: Record<number, NavItem> = {};
 
         items.forEach((item, navItemIndex) => {
             const navLink = item.querySelector('a.nav__link') as HTMLAnchorElement;
+
             const handleItemClick = (event: MouseEvent) => {
-                event.preventDefault(); // Prevent default link behavior
+                event.preventDefault(); // Prevent default browser navigation
+                // Update the active item state, triggering the next effect
                 setState((prevState) => ({
                     ...prevState,
-                    activeItem: navItemIndex
+                    activeItem: navItemIndex // Set the ID of the clicked item as active
                 }));
-
-                if (navLink) {
-                    // Pass the target URL to triggerFrontdropTransition
-                    triggerFrontdropTransition(state.navigationItems[navItemIndex], navLink.href);
-                }
             };
 
             const stateItem: NavItem = {
                 color: colors[navItemIndex % colors.length],
                 element: item as HTMLElement,
                 id: navItemIndex,
-                isActive: false,
+                isActive: false, // Initially not active
                 type: 'DEFAULT',
-                onClick: handleItemClick,
+                onClick: handleItemClick, // Store the click handler
             };
 
-            const subNav = item.querySelector('.nav') as HTMLElement;
+            // Check for and store sub-navigation if it exists
+            const subNav = item.querySelector('.nav--header-2') as HTMLElement;
             if (subNav) {
                 stateItem.childNavigation = subNav;
                 stateItem.type = 'PARENT';
             }
 
-            navItems[navItemIndex] = stateItem;
+            navItemsMap[navItemIndex] = stateItem;
         });
 
+        // Update the component state with discovered items and the root element
         setState((prevState) => ({
             ...prevState,
-            navigationItems: navItems,
-            root: rootRef.current as HTMLElement,
+            navigationItems: navItemsMap,
+            root: rootRef.current // Store the root DOM node
         }));
-    }, []);
 
+    }, []); // Empty dependency array means this runs once on mount
+
+    // Effect 2: Handle active item change - Trigger animations and update classes
     useEffect(() => {
-
-        if (state.activeItem !== undefined) {
-            const previousActiveItem = Object.values(state.navigationItems).find((item) => item.isActive);
+        // Only run if an activeItem ID is set and the item exists
+        if (state.activeItem !== undefined && state.navigationItems[state.activeItem]) {
             const newActiveItem = state.navigationItems[state.activeItem];
             const navLink = newActiveItem.element.querySelector('a.nav__link') as HTMLAnchorElement;
-            // Remove active class from previous item if it exists
+
+            // Find any previously active item and deactivate it
+            const previousActiveItem = Object.values(state.navigationItems).find(item => item.isActive && item.id !== newActiveItem.id);
             if (previousActiveItem) {
                 previousActiveItem.element.classList.remove('nav__item--active');
-                previousActiveItem.isActive = false;
+                // Update internal state representation (optional but good practice)
+                setState(prevState => ({
+                    ...prevState,
+                    navigationItems: {
+                        ...prevState.navigationItems,
+                        [previousActiveItem.id]: { ...previousActiveItem, isActive: false }
+                    }
+                }));
             }
 
-            // Trigger the frontdrop transition for the new active item
-            triggerFrontdropTransition(newActiveItem, navLink.href);
+            // Activate the new item and trigger the transition animation
+            if (!newActiveItem.isActive) { // Optional check to prevent re-triggering if already active
+                newActiveItem.element.classList.add('nav__item--active');
+                // Update internal state representation
+                setState(prevState => ({
+                    ...prevState,
+                    navigationItems: {
+                        ...prevState.navigationItems,
+                        [newActiveItem.id]: { ...newActiveItem, isActive: true }
+                    }
+                }));
+
+                // Trigger the animation, passing the target URL if available
+                triggerFrontdropTransition(newActiveItem, navLink?.href);
+            }
         }
-    }, [state.activeItem]);
+    }, [state.activeItem, state.navigationItems]); // Re-run when activeItem changes or items map updates
 
-    const triggerFrontdropTransition = (activeItem: NavItem, targetHref?: string) => {
-        if (!state.root || !activeItem) return;
-
-        // Animate frontdrop in and then out
-        anime.timeline()
-            .add({
-                targets: '.layout__frontdrop',
-                backgroundColor: activeItem.color,
-                duration: 800,
-                easing: 'easeOutExpo',
-                opacity: 1,
-                scaleX: [{ value: 0 }, { value: 1 }],
-                translateX: [{ value: '270px' }],
-                begin: () => state.root?.classList.add('nav--active')
-            })
-            .add({
-                targets: '.layout__frontdrop',
-                duration: 800,
-                easing: 'easeOutCirc',
-                scaleX: [{ value: 1 }, { value: 0 }],
-                translateX: [{ value: '0' }],
-                complete: () => {
-                    state.root?.classList.remove('nav--active');
-                    console.log(targetHref);
-                    if (targetHref) {
-                        window.location.href = targetHref;                  }
-                }
-            });
-
-        // Set active class for the new active item
-        activeItem.element.classList.add('nav__item--active');
-        activeItem.isActive = true;
-        setState((prevState) => ({
-            ...prevState,
-            navigationItems: {
-                ...prevState.navigationItems,
-                [activeItem.id]: {
-                    ...activeItem,
-                    isActive: true
-                }
-            }
-        }));
-    };
-
+    // Effect 3: Attach/Detach Click Listeners
     useEffect(() => {
-        Object.values(state.navigationItems).forEach((navItem) => {
-            navItem.element.addEventListener('click', navItem.onClick);
+        const currentNavItems = Object.values(state.navigationItems);
+
+        // Add listeners when items are available/updated
+        currentNavItems.forEach((navItem) => {
+            if (navItem.element) { // Check if element exists
+                navItem.element.addEventListener('click', navItem.onClick);
+            }
         });
 
+        // Cleanup function: Remove listeners when component unmounts or items change
         return () => {
-            Object.values(state.navigationItems).forEach((navItem) => {
-                navItem.element.removeEventListener('click', navItem.onClick);
+            currentNavItems.forEach((navItem) => {
+                if (navItem.element) { // Check if element exists before removing
+                    navItem.element.removeEventListener('click', navItem.onClick);
+                }
             });
         };
-    }, [state.navigationItems]);
+    }, [state.navigationItems]); // Dependency array ensures listeners update if items change
 
+
+    // Effect 4: Intro Animation
     useEffect(() => {
+        // Ensure refs are populated before starting animation
+        if (!rootRef.current || !itemsRef.current) return;
+
+        // Check if navigationItems are loaded to prevent errors
+        if (Object.keys(state.navigationItems).length === 0) return;
+
         const introAnimation = anime.timeline({
-            complete: () => {
-                Object.values(state.navigationItems).forEach((navItem) => {
-                    navItem.element.addEventListener('click', navItem.onClick);
-                    navItem.element.style.transform = '';
-                });
-            },
+            // Note: Complete callbacks modifying DOM style directly can be fragile.
+            // Prefer letting CSS handle final states where possible.
         });
 
         introAnimation.add({
             duration: 350,
             delay: 1000,
             easing: 'easeOutCirc',
-            targets: '.layout__backdrop',
+            targets: '.layout__backdrop', // Target backdrop by class
             scaleX: [0, 1],
-        }).add({
-            delay: anime.stagger(75),
-            duration: 450,
-            easing: 'easeOutCirc',
-            opacity: [0, 1],
-            translateY: ['100%', '0%'],
-            targets: '.nav--header-1 > .nav__item:not(.nav__item--home)',
-        }).add({
-            easing: 'easeOutExpo',
-            targets: '.layout__backdrop',
-            translateX: [{ delay: 350, value: '67%' }],
-        }).add({
-            duration: 350,
-            easing: 'easeOutExpo',
-            targets: '.hero-title',
-            opacity: [0, 1],
-            translateY: ['50px', '0'],
-            complete: () => {
-                // Clean up the transform style to let CSS take effect
-                const heroTitle = document.querySelector('.hero-title') as HTMLElement;
-                if (heroTitle) heroTitle.style.transform = '';
-            }
-        }).add({
-            duration: 350,
-            easing: 'easeOutExpo',
-            targets: '.hero-text',
-            opacity: [0, 1],
-            translateY: ['30px', '-3rem'],
-            complete: () => {
-                // Clean up the transform style to let CSS take effect
-                const heroText = document.querySelector('.hero-text') as HTMLElement;
-                if (heroText) heroText.style.transform = '';
-            }
-        }, '-=100')
-    }, []);
+        })
+            .add({
+                targets: itemsRef.current.querySelectorAll('.nav--header-1 > .nav__item:not(.nav__item--home)'), // Target list items using ref
+                translateY: ['100%', '0%'],
+                opacity: [0, 1],
+                delay: anime.stagger(75),
+                duration: 450,
+                easing: 'easeOutCirc',
+            }, '-=50') // Overlap previous animation slightly
+            .add({
+                targets: '.layout__backdrop',
+                translateX: ['0%', '67%'], // Animate backdrop sideways
+                delay: 350,
+                easing: 'easeOutExpo',
+            })
+            // Animate HeroSection elements (ensure HeroSection is rendered and has these classes)
+            .add({
+                targets: '.hero-title', // Target title by class
+                translateY: ['50px', '0px'],
+                opacity: [0, 1],
+                duration: 350,
+                easing: 'easeOutExpo',
+            }, '-=200') // Overlap slightly more
+            .add({
+                targets: '.hero-text', // Target text by class
+                translateY: ['30px', '0px'], // Adjusted final Y position
+                opacity: [0, 1],
+                duration: 350,
+                easing: 'easeOutExpo',
+            }, '-=100'); // Overlap
 
+        // Cleanup function for the animation
+        return () => {
+            introAnimation.pause(); // Stop the animation if the component unmounts
+            // You might need anime.remove('.selector') here if elements are removed/re-added dynamically
+            // For simple unmounts, pause() is usually sufficient.
+        };
+        // Re-run animation if navigationItems changes (might need adjustment based on desired behavior)
+    }, [state.navigationItems, rootRef.current, itemsRef.current]);
+
+
+    // --- Helper Functions ---
+
+    const triggerFrontdropTransition = (activeItem: NavItem, targetHref?: string) => {
+        if (!state.root || !activeItem) return;
+
+        state.root.classList.add('nav--active'); // Add class to root to potentially style main content opacity
+
+        anime.timeline({
+            complete: () => { // Cleanup happens once animation finishes
+                state.root?.classList.remove('nav--active');
+                // Navigate only after animation completes and if targetHref is provided
+                if (targetHref) {
+                    // Consider using Next.js Router for client-side navigation if available
+                    // import { useRouter } from 'next/navigation';
+                    // const router = useRouter();
+                    // router.push(targetHref);
+                    window.location.href = targetHref; // Fallback to full page reload
+                }
+            }
+        })
+            .add({
+                targets: '.layout__frontdrop',
+                backgroundColor: activeItem.color, // Use the item's color
+                opacity: [0, 1], // Fade in
+                // Consider simplifying: scaleX/translateX might conflict with fixed positioning or other transforms
+                // scaleX: [{ value: 0 }, { value: 1 }],
+                // translateX: ['270px', '270px'], // Keep it positioned if scaling
+                duration: 600, // Adjusted duration
+                easing: 'easeOutExpo',
+            }, 0) // Start immediately
+            .add({
+                targets: '.layout__frontdrop',
+                opacity: [1, 0], // Fade out
+                // scaleX: [{ value: 1 }, { value: 0 }],
+                // translateX: ['270px', '0px'], // Animate back if scaling
+                duration: 600, // Adjusted duration
+                easing: 'easeInCirc', // Use a complementary easing
+            }, '+=200'); // Start fade out shortly after fade in finishes
+    };
+
+
+    // --- Render ---
     return (
+        // Root layout container
         <div className="layout"  ref={rootRef}>
+            {/* Background/Foreground overlay elements for animations */}
             <div className="layout__backdrop"></div>
             <div className="layout__frontdrop"></div>
+
+            {/* Wrapper containing sidebar and main content */}
             <div className="layout__wrapper">
+
+                {/* Sidebar Header - RESPONSIVE HIDING APPLIED HERE */}
+                {/* `hidden` = hidden by default (mobile) */}
+                {/* `md:block` = display as block from medium breakpoint (768px) upwards */}
                 <header className="layout__header">
-                    <nav>
+                    <nav className="h-full"> {/* Ensure nav takes full header height */}
+                        {/* Main navigation list */}
                         <ul className="nav flex flex-col nav--header nav--header-1" ref={itemsRef}>
                             <li className="nav__item nav__item--home">
                                 <a className="nav__link" href="#0">Home</a>
@@ -215,6 +257,7 @@ const Navbar: React.FC = () => {
                             </li>
                             <li className="nav__item nav__item--clients">
                                 <a className="nav__link" href="#0">Blog Generator</a>
+                                {/* Sub Navigation 1 */}
                                 <ul className="nav nav--header nav--header-2">
                                     <li className="nav__item">
                                         <a className="nav__link" href="#0">Burger King</a>
@@ -229,6 +272,7 @@ const Navbar: React.FC = () => {
                             </li>
                             <li className="nav__item nav__item--services">
                                 <a className="nav__link" href="#0">Video Generator</a>
+                                {/* Sub Navigation 2 */}
                                 <ul className="nav nav--header nav--header-2">
                                     <li className="nav__item">
                                         <a className="nav__link" href="#0">Print Design</a>
@@ -247,11 +291,15 @@ const Navbar: React.FC = () => {
                         </ul>
                     </nav>
                 </header>
-                <main>
-                    <HeroSection />
-                </main>
-            </div>
-        </div>
+
+                {/* Main Content Area - RESPONSIVE PADDING APPLIED HERE */}
+                {/* `flex-grow w-full`: Takes remaining width */}
+                {/* `md:pl-[300px]`: Adds left padding ONLY when sidebar is visible (md+) */}
+                {/*   Adjust '300px' to your actual sidebar width if different     */}
+
+
+            </div> {/* End layout__wrapper */}
+        </div> // End layout
     );
 };
 

@@ -1,6 +1,31 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --background-image-gradient-radial: radial-gradient(var(--tw-gradient-stops));
+  --background-image-gradient-conic: conic-gradient(
+    from 180deg at 50% 50%,
+    var(--tw-gradient-stops)
+  );
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
+
 *,*::before,*::after {
   box-sizing: border-box;
 
@@ -33,6 +58,7 @@ body {
   background-size: cover;
   height: 100vh;
   width: 100%;
+  /*position: absolute;*/
   /*position: fixed;*/
 }
 
@@ -75,13 +101,10 @@ body {
   grid-template-columns: 300px repeat(3, 1fr);
   margin: auto;
   height: 100%;
-  width: 100vw;
 }
 
 
-.hero {
-  padding-top: 6rem;
-}
+
 .custom-offset {
   position: absolute; /* Ensures the element is positioned absolutely */
   /*display: flex; !* Use Flexbox layout *!*/
@@ -102,16 +125,15 @@ body {
   background-image: url('/wave-haikei.svg')
 }
 .hero-title {
-
   color: var(--ccft-primary-hText);
   font-family: var(--ccft-ts-secondary);
   font-weight: 400;
   font-size: 5rem;
   line-height: 1.2;
-  margin: 10rem 30rem 0;
-  position: relative;
+
   width: auto;
   z-index: 2;
+
 }
 
 .hero-title em {
@@ -139,9 +161,9 @@ body {
   /*margin: 1.5rem;*/
   /*margin-left: 30rem;*/
   /*margin-right: auto;*/
-  padding: 3rem 5rem;
+  padding: 3rem 2rem;
   transform: translateX(3rem);
-  width: 50%;
+  width: 75%;
   z-index: 3;
 }
 .hero-text2 {
@@ -172,6 +194,14 @@ body {
   width: 50%;
   z-index: 3;
 }
+.nav-bar{
+  display:block;
+}
+@media (max-width: 1550px) {
+  .nav-bar{
+    display:none;
+  }
+}
 
 
 .hero-text a {
@@ -191,7 +221,7 @@ body {
   height: 100%;
 position: fixed;
   background-color: var(--ccft-cs-background);
-  z-index: 5;
+  z-index: 50;
 }
 
 .layout__header nav {
@@ -347,16 +377,7 @@ position: fixed;
   display: inline-block;
   line-height: 1em;
 }
-@media (max-width: 768px) {
 
-  .nav--header-1 {
-    display: none;
-  }
-
-  .hamburger {
-    display: block;
-  }
-}
 /*        .hero-text3{*/
 /*    transform: translateX(-18rem) !important*/
 /*  }*/
@@ -390,22 +411,13 @@ position: fixed;
 /*}*/
 
 
-.layout__main, .hero {
+.layout__main{
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-.layout__wrapper {
-    display: flex;
-    flex-grow: 1;
-}
 
-.main {
-    flex-grow: 1;
-    overflow-y: auto; /* Ensure the main section can scroll if it overflows vertically */
-    background: white; /* Example background for main content */
-}
 /*.hero-block {*/
 /*    text-align: center;*/
 /*    max-width: 80%;*/

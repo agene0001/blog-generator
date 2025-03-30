@@ -3,12 +3,12 @@ import anime from "animejs"
 
 const WaterDropGrid = () => {
     return (
-        <div className='absolute grid max-w-full h-screen lg:place-content-center place-content-end sm:w-screen max-w-screen bg-slate-900  px-8 ' >
+        <div className='absolute grid h-screen lg:place-content-center sm:w-screen max-w-screen bg-slate-900  px-8 ' >
             <DotGrid/>
         </div>
     );
 };
-const GRID_WIDTH = 25;
+const GRID_WIDTH = 40;
 const GRID_HEIGHT = 20;
 
 const DotGrid = () => {
@@ -46,7 +46,7 @@ const DotGrid = () => {
         }
     }
     return (
-        <div style={{gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)`, zIndex: 4}} className=' grid w-fit'>{dots}</div>
+        <div style={{gridTemplateColumns: `repeat(${GRID_WIDTH}, 1fr)`, zIndex: 4, marginTop:'20rem'}} className=' grid w-fit'>{dots}</div>
     )
 }
 
