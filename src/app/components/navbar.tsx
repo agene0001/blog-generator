@@ -1,9 +1,9 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react';
-import anime from 'animejs';
+import {createTimeline, stagger} from 'animejs';
 import WaterDropGrid from "@/app/components/WaterDropGrid";
 import HeroSection from "@/app/components/hero";
-import {router} from "next/client";
+import {usePageTransition} from "@/app/components/PageTransition";
 
 interface NavItem {
     color: string;
@@ -27,6 +27,7 @@ const Navbar: React.FC = () => {
     const [state, setState] = useState<State>({ navigationItems: {}, root: null, activeItem: undefined });
     const itemsRef = useRef<HTMLUListElement>(null);
     const rootRef = useRef<HTMLDivElement>(null);
+    const {navigate} = usePageTransition();
 
     useEffect(() => {
         if (!itemsRef.current || !rootRef.current) return;
@@ -44,8 +45,11 @@ const Navbar: React.FC = () => {
                 }));
 
                 if (navLink) {
-                    // Pass the target URL to triggerFrontdropTransition
-                    triggerFrontdropTransition(state.navigationItems[navItemIndex], navLink.href);
+                    // Pass the route path (raw href attribute) to the transition.
+                    triggerFrontdropTransition(
+                        state.navigationItems[navItemIndex],
+                        navLink.getAttribute('href') ?? undefined,
+                    );
                 }
             };
 
@@ -80,6 +84,7 @@ const Navbar: React.FC = () => {
             const previousActiveItem = Object.values(state.navigationItems).find((item) => item.isActive);
             const newActiveItem = state.navigationItems[state.activeItem];
             const navLink = newActiveItem.element.querySelector('a.nav__link') as HTMLAnchorElement;
+            const targetHref = navLink?.getAttribute('href') ?? undefined;
             // Remove active class from previous item if it exists
             if (previousActiveItem) {
                 previousActiveItem.element.classList.remove('nav__item--active');
@@ -87,40 +92,14 @@ const Navbar: React.FC = () => {
             }
 
             // Trigger the frontdrop transition for the new active item
-            triggerFrontdropTransition(newActiveItem, navLink.href);
+            triggerFrontdropTransition(newActiveItem, targetHref);
         }
     }, [state.activeItem]);
 
     const triggerFrontdropTransition = (activeItem: NavItem, targetHref?: string) => {
-        if (!state.root || !activeItem) return;
+        if (!activeItem) return;
 
-        // Animate frontdrop in and then out
-        anime.timeline()
-            .add({
-                targets: '.layout__frontdrop',
-                backgroundColor: activeItem.color,
-                duration: 800,
-                easing: 'easeOutExpo',
-                opacity: 1,
-                scaleX: [{ value: 0 }, { value: 1 }],
-                translateX: [{ value: '270px' }],
-                begin: () => state.root?.classList.add('nav--active')
-            })
-            .add({
-                targets: '.layout__frontdrop',
-                duration: 800,
-                easing: 'easeOutCirc',
-                scaleX: [{ value: 1 }, { value: 0 }],
-                translateX: [{ value: '0' }],
-                complete: () => {
-                    state.root?.classList.remove('nav--active');
-                    console.log(targetHref);
-                    if (targetHref) {
-                        window.location.href = targetHref;                  }
-                }
-            });
-
-        // Set active class for the new active item
+        // Mark the clicked item active for styling.
         activeItem.element.classList.add('nav__item--active');
         activeItem.isActive = true;
         setState((prevState) => ({
@@ -133,6 +112,11 @@ const Navbar: React.FC = () => {
                 }
             }
         }));
+
+        // The persistent overlay (PageTransition) plays the slide *while* navigating.
+        if (targetHref && targetHref.startsWith('/')) {
+            navigate(targetHref);
+        }
     };
 
     useEffect(() => {
@@ -148,8 +132,8 @@ const Navbar: React.FC = () => {
     }, [state.navigationItems]);
 
     useEffect(() => {
-        const introAnimation = anime.timeline({
-            complete: () => {
+        const introAnimation = createTimeline({
+            onComplete: () => {
                 Object.values(state.navigationItems).forEach((navItem) => {
                     navItem.element.addEventListener('click', navItem.onClick);
                     navItem.element.style.transform = '';
@@ -157,46 +141,30 @@ const Navbar: React.FC = () => {
             },
         });
 
-        introAnimation.add({
+        introAnimation.add('.layout__backdrop', {
             duration: 350,
             delay: 1000,
-            easing: 'easeOutCirc',
-            targets: '.layout__backdrop',
+            ease: 'outCirc',
             scaleX: [0, 1],
-        }).add({
-            delay: anime.stagger(75),
+        }).add('.nav--header-1 > .nav__item:not(.nav__item--home)', {
+            delay: stagger(75),
             duration: 450,
-            easing: 'easeOutCirc',
+            ease: 'outCirc',
             opacity: [0, 1],
             translateY: ['100%', '0%'],
-            targets: '.nav--header-1 > .nav__item:not(.nav__item--home)',
-        }).add({
-            easing: 'easeOutExpo',
-            targets: '.layout__backdrop',
-            translateX: [{ delay: 350, value: '67%' }],
-        }).add({
-            duration: 350,
-            easing: 'easeOutExpo',
-            targets: '.hero-title',
-            opacity: [0, 1],
-            translateY: ['50px', '0'],
-            complete: () => {
-                // Clean up the transform style to let CSS take effect
-                const heroTitle = document.querySelector('.hero-title') as HTMLElement;
-                if (heroTitle) heroTitle.style.transform = '';
-            }
-        }).add({
-            duration: 350,
-            easing: 'easeOutExpo',
-            targets: '.hero-text',
-            opacity: [0, 1],
-            translateY: ['30px', '-3rem'],
-            complete: () => {
-                // Clean up the transform style to let CSS take effect
-                const heroText = document.querySelector('.hero-text') as HTMLElement;
-                if (heroText) heroText.style.transform = '';
-            }
-        }, '-=100')
+        }).add('.layout__backdrop', {
+            ease: 'outExpo',
+            translateX: [{ delay: 350, to: '67%' }],
+        })
+        // .hero-title / .hero-text are animated with framer-motion inside HeroSection
+        // (see hero.tsx) so framer-motion owns their transform — animating them here
+        // via anime fought the CSS `transform: translateX(3rem)` and caused jitter.
+
+        // Cancel and revert on unmount so Strict Mode's double-invoke (and
+        // remounts) don't leave two timelines fighting over the same elements.
+        return () => {
+            introAnimation.revert();
+        };
     }, []);
 
     return (
@@ -208,13 +176,13 @@ const Navbar: React.FC = () => {
                     <nav>
                         <ul className="nav flex flex-col nav--header nav--header-1" ref={itemsRef}>
                             <li className="nav__item nav__item--home">
-                                <a className="nav__link" href="#0">Home</a>
+                                <a className="nav__link" href="/">Home</a>
                             </li>
                             <li className="nav__item nav__item--about">
-                                <a className="nav__link" href="#0">About</a>
+                                <a className="nav__link" href="/about">About</a>
                             </li>
                             <li className="nav__item nav__item--clients">
-                                <a className="nav__link" href="#0">Blog Generator</a>
+                                <a className="nav__link" href="/blogGenerator">Blog Generator</a>
                                 <ul className="nav nav--header nav--header-2">
                                     <li className="nav__item">
                                         <a className="nav__link" href="#0">Burger King</a>
@@ -228,7 +196,7 @@ const Navbar: React.FC = () => {
                                 </ul>
                             </li>
                             <li className="nav__item nav__item--services">
-                                <a className="nav__link" href="#0">Video Generator</a>
+                                <a className="nav__link" href="/videoGenerator">Video Generator</a>
                                 <ul className="nav nav--header nav--header-2">
                                     <li className="nav__item">
                                         <a className="nav__link" href="#0">Print Design</a>
@@ -243,6 +211,9 @@ const Navbar: React.FC = () => {
                             </li>
                             <li className="nav__item nav__item--contact">
                                 <a className="nav__link" href="#0">Contact</a>
+                            </li>
+                            <li className="nav__item nav__item--login">
+                                <a className="nav__link" href="/login">Login</a>
                             </li>
                         </ul>
                     </nav>
